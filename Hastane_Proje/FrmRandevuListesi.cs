@@ -1,46 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 using System.Windows.Forms;
-using System.Data.SqlClient;
-
 namespace Hastane_Proje
 {
     public partial class FrmRandevuListesi : Form
     {
-        public FrmRandevuListesi()
-        {
-            InitializeComponent();
-        }
-        sqlbaglantisi bgl = new sqlbaglantisi();
-
+        public string SekreterTc;
+        public FrmRandevuListesi() { InitializeComponent(); }
         private void FrmRandevuListesi_Load(object sender, EventArgs e)
-        {
-            DataTable dataTable = new DataTable();
-            SqlDataAdapter dataAdapter = new SqlDataAdapter("Select * From Tbl_Randevular", bgl.baglanti());
-            dataAdapter.Fill(dataTable);
-            dataGridView1.DataSource = dataTable;
-
-
-        }
+        { dataGridView1.DataSource = Database.Query("SELECT Randevuid,RandevuTarih,RandevuSaat,RandevuBrans,RandevuDoktor,RandevuDurum,HastaTc,HastaSikayet FROM Tbl_Randevular ORDER BY RandevuTarih,RandevuSaat"); FormTools.Grid(dataGridView1); }
         public void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-           
-            FrmSekreterDetay frm = new FrmSekreterDetay();
-            frm.Show();
-            frm.id = dataGridView1.CurrentRow.Cells["RandevuId"].Value.ToString();
-            frm.tarih = dataGridView1.CurrentRow.Cells["RandevuTarih"].Value.ToString();
-            frm.saat = dataGridView1.CurrentRow.Cells["RandevuSaat"].Value.ToString();
-            frm.brans = dataGridView1.CurrentRow.Cells["RandevuBrans"].Value.ToString();
-            frm.doktor = dataGridView1.CurrentRow.Cells["RandevuDoktor"].Value.ToString();
-            frm.durum = Convert.ToBoolean(dataGridView1.CurrentRow.Cells["RandevuDurum"].Value);
-
+            if (!FormTools.Row(dataGridView1, e)) return;
+            var row = dataGridView1.Rows[e.RowIndex];
+            using (var form = new FrmSekreterDetay
+            {
+                stc = SekreterTc,
+                id = Convert.ToString(row.Cells["Randevuid"].Value),
+                tarih = Convert.ToDateTime(row.Cells["RandevuTarih"].Value).ToString("dd.MM.yyyy"),
+                saat = ((TimeSpan)row.Cells["RandevuSaat"].Value).ToString(@"hh\:mm"),
+                brans = Convert.ToString(row.Cells["RandevuBrans"].Value),
+                doktor = Convert.ToString(row.Cells["RandevuDoktor"].Value),
+                tc = Convert.ToString(row.Cells["HastaTc"].Value),
+                durum = Convert.ToBoolean(row.Cells["RandevuDurum"].Value)
+            }) form.ShowDialog(this);
+            FrmRandevuListesi_Load(sender, e);
         }
-
     }
 }

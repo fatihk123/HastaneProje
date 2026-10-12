@@ -1,27 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
+using System.Configuration;
 using System.Data.SqlClient;
-using System.Drawing;
-
-
 namespace Hastane_Proje
 {
     public class sqlbaglantisi
     {
-
-        public  SqlConnection baglanti()
+        public static string ConnectionString
         {
-            SqlConnection baglan = new SqlConnection("Data Source=Fatih; Initial Catalog=HastaneProje; Integrated Security = True;");
-
-            baglan.Open();
-            return baglan;
-
-
+            get
+            {
+                var local = Environment.GetEnvironmentVariable("HASTANE_CONNECTION_STRING");
+                return string.IsNullOrWhiteSpace(local)
+                    ? ConfigurationManager.ConnectionStrings["Hastane_Proje.Properties.Settings.HastaneProjeConnectionString"].ConnectionString
+                    : local;
+            }
         }
-
-
+        public SqlConnection baglanti()
+        {
+            var connection = new SqlConnection(ConnectionString);
+            connection.Open();
+            return connection;
+        }
     }
 }

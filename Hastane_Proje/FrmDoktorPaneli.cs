@@ -1,99 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SqlClient;
-
-
 namespace Hastane_Proje
 {
     public partial class FrmDoktorPaneli : Form
     {
-        public FrmDoktorPaneli()
-        {
-            InitializeComponent();
-        }
-        sqlbaglantisi bgl = new sqlbaglantisi();
-
+        public FrmDoktorPaneli() { InitializeComponent(); TxtSifre.UseSystemPasswordChar = true; CmbBrans.DropDownStyle = ComboBoxStyle.DropDownList; }
+        private void RefreshRows()
+        { dataGridView1.DataSource = Database.Query("SELECT Doktorid,DoktorAd,DoktorSoyad,DoktorBrans,DoktorTc FROM Tbl_Doktorlar ORDER BY DoktorAd,DoktorSoyad"); FormTools.Grid(dataGridView1); }
+        private void ClearFields() { TxtAd.Clear(); TxtSoyad.Clear(); MskTc.Clear(); TxtSifre.Clear(); MskTc.ReadOnly = false; }
         private void FrmDoktorPaneli_Load(object sender, EventArgs e)
-        {
-            DataTable dt = new DataTable();
-            SqlDataAdapter da = new SqlDataAdapter("Select * From Tbl_Doktorlar", bgl.baglanti());
-            da.Fill(dt);
-            dataGridView1.DataSource = dt;
-
-            //Branşları ComboBox'a Çekme
-            SqlCommand brns = new SqlCommand("Select BransAd from Tbl_Branslar ", bgl.baglanti());
-            SqlDataReader dr1 = brns.ExecuteReader();
-            while (dr1.Read())
-            {
-                CmbBrans.Items.Add(dr1[0].ToString());
-            }
-            bgl.baglanti().Close();
-
-
-
-
-        }
-
+        { RefreshRows(); CmbBrans.Items.Clear(); foreach (DataRow row in Database.Query("SELECT BransAd FROM Tbl_Branslar ORDER BY BransAd").Rows) CmbBrans.Items.Add(row[0]); }
         private void BtnEkle_Click(object sender, EventArgs e)
         {
-            SqlCommand dre = new SqlCommand("insert into Tbl_Doktorlar (DoktorAd,DoktorSoyad,DoktorBrans,DoktorTC,DoktorSifre) values (@d1,@d2,@d3,@d4,@d5)", bgl.baglanti());
-            dre.Parameters.AddWithValue("@d1", TxtAd.Text);
-            dre.Parameters.AddWithValue("@d2", TxtSoyad.Text);
-            dre.Parameters.AddWithValue("@d3", CmbBrans.Text);
-            dre.Parameters.AddWithValue("@d4", MskTc.Text);
-            dre.Parameters.AddWithValue("@d5", TxtSifre.Text);
-            dre.ExecuteNonQuery();
-            bgl.baglanti().Close();
-            MessageBox.Show("Doktor Eklendi", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-
-
+            Database.Execute("INSERT INTO Tbl_Doktorlar(DoktorAd,DoktorSoyad,DoktorBrans,DoktorTc,DoktorSifre) VALUES(@ad,@soyad,@brans,@tc,@sifre)", Database.P("@ad", FormTools.Required(TxtAd.Text, "Ad")), Database.P("@soyad", FormTools.Required(TxtSoyad.Text, "Soyad")), Database.P("@brans", FormTools.Required(CmbBrans.Text, "Branş")), Database.P("@tc", FormTools.Identity(MskTc.Text)), Database.P("@sifre", PasswordHasher.Hash(TxtSifre.Text)));
+            MessageBox.Show("Doktor eklendi."); ClearFields(); RefreshRows();
         }
-
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-
-            int secilen = dataGridView1.SelectedCells[0].RowIndex;
-            TxtAd.Text = dataGridView1.Rows[secilen].Cells[1].Value.ToString();
-            TxtSoyad.Text = dataGridView1.Rows[secilen].Cells[2].Value.ToString();
-            CmbBrans.Text = dataGridView1.Rows[secilen].Cells[3].Value.ToString();
-            MskTc.Text = dataGridView1.Rows[secilen].Cells[4].Value.ToString();
-            TxtSifre.Text = dataGridView1.Rows[secilen].Cells[5].Value.ToString();
+            if (!FormTools.Row(dataGridView1, e)) return;
+            var row = dataGridView1.Rows[e.RowIndex]; TxtAd.Text = Convert.ToString(row.Cells["DoktorAd"].Value); TxtSoyad.Text = Convert.ToString(row.Cells["DoktorSoyad"].Value); CmbBrans.Text = Convert.ToString(row.Cells["DoktorBrans"].Value); MskTc.Text = Convert.ToString(row.Cells["DoktorTc"].Value); MskTc.ReadOnly = true; TxtSifre.Clear();
         }
-
         private void BtnSil_Click(object sender, EventArgs e)
         {
-
-            SqlCommand sil = new SqlCommand("Delete From Tbl_Doktorlar where DoktorTC=@d1", bgl.baglanti());
-            sil.Parameters.AddWithValue("@d1", MskTc.Text);
-            sil.ExecuteNonQuery();
-            bgl.baglanti().Close();
-            MessageBox.Show("Doktor Silindi", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-
-
+            var identity = FormTools.Identity(MskTc.Text);
+            int deleted = Database.Execute("DELETE FROM Tbl_Doktorlar WHERE DoktorTc=@tc AND NOT EXISTS (SELECT 1 FROM Tbl_Randevular WHERE RandevuDoktor=DoktorAd+' '+DoktorSoyad)", Database.P("@tc", identity));
+            if (deleted != 1) { MessageBox.Show("Doktor bulunamadı veya doktora bağlı randevular var."); return; }
+            MessageBox.Show("Doktor silindi."); ClearFields(); RefreshRows();
         }
-
         private void BtnGuncelle_Click(object sender, EventArgs e)
-        {
-            SqlCommand guncelle = new SqlCommand("Update Tbl_Doktorlar set DoktorAd=@d1,DoktorSoyad=@d2,DoktorBrans=@d3,DoktorSifre=@d4 where DoktorTC=@d5", bgl.baglanti());
-            guncelle.Parameters.AddWithValue("@d1", TxtAd.Text);
-            guncelle.Parameters.AddWithValue("@d2", TxtSoyad.Text);
-            guncelle.Parameters.AddWithValue("@d3", CmbBrans.Text);
-            guncelle.Parameters.AddWithValue("@d4", TxtSifre.Text);
-            guncelle.Parameters.AddWithValue("@d5", MskTc.Text);
-            guncelle.ExecuteNonQuery();
-            bgl.baglanti().Close();
-            MessageBox.Show("Doktor Bilgileri Güncellendi", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-        }
+        { DoctorService.Update(MskTc.Text, TxtAd.Text, TxtSoyad.Text, CmbBrans.Text, TxtSifre.Text); MessageBox.Show("Doktor bilgileri güncellendi."); ClearFields(); RefreshRows(); }
     }
 }

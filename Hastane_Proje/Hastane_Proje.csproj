@@ -35,6 +35,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -46,8 +47,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BaglantiSinifi.cs" />
-    <Compile Include="ClsSqlBaglanti.cs" />
+    <Compile Include="DoctorService.cs" />
+    <Compile Include="Database.cs" />
+    <Compile Include="PasswordHasher.cs" />
+    <Compile Include="FormTools.cs" />
+    <Compile Include="AccountService.cs" />
+    <Compile Include="AppointmentService.cs" />
+
     <Compile Include="FrmRandevuListesi.cs">
       <SubType>Form</SubType>
     </Compile>

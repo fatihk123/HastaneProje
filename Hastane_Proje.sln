@@ -1,11 +1,9 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hastane_Proje", "Hastane_Proje\Hastane_Proje.csproj", "{D2158D43-19E8-41BB-A2DB-5F80B8930062}"
-EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "HastaneProjesi", "..\..\SetupDeneme\HastaneProjesi\HastaneProjesi.vdproj", "{E9A3DE3C-9F6E-94FB-7BAF-A75DDE31A84A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +15,6 @@ Global
 		{D2158D43-19E8-41BB-A2DB-5F80B8930062}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D2158D43-19E8-41BB-A2DB-5F80B8930062}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D2158D43-19E8-41BB-A2DB-5F80B8930062}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E9A3DE3C-9F6E-94FB-7BAF-A75DDE31A84A}.Debug|Any CPU.ActiveCfg = Debug
-		{E9A3DE3C-9F6E-94FB-7BAF-A75DDE31A84A}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

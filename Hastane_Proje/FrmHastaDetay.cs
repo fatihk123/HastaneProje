@@ -1,125 +1,52 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SqlClient;
-using System.Data.Common;
-
-
 namespace Hastane_Proje
 {
-
     public partial class FrmHastaDetay : Form
     {
-        sqlbaglantisi bgln = new sqlbaglantisi();
-        public FrmHastaDetay()
-        {
-            InitializeComponent();
-        }
         public string tc;
+        public FrmHastaDetay() { InitializeComponent(); }
+        private void History()
+        {
+            dataGridView1.DataSource = Database.Query("SELECT Randevuid,RandevuTarih,RandevuSaat,RandevuBrans,RandevuDoktor,HastaSikayet FROM Tbl_Randevular WHERE HastaTc=@tc ORDER BY RandevuTarih DESC,RandevuSaat", Database.P("@tc", tc));
+            FormTools.Grid(dataGridView1);
+        }
+        private void Available()
+        {
+            dataGridView2.DataSource = Database.Query("SELECT Randevuid,RandevuTarih,RandevuSaat,RandevuBrans,RandevuDoktor FROM Tbl_Randevular WHERE RandevuBrans=@brans AND RandevuDoktor=@doktor AND RandevuDurum=0 AND (RandevuTarih>CONVERT(date,GETDATE()) OR (RandevuTarih=CONVERT(date,GETDATE()) AND RandevuSaat>CONVERT(time,GETDATE()))) ORDER BY RandevuTarih,RandevuSaat", Database.P("@brans", CmbBrans.Text), Database.P("@doktor", CmbDoktor.Text));
+            FormTools.Grid(dataGridView2);
+            TxtId.Clear();
+        }
         private void FrmHastaDetay_Load(object sender, EventArgs e)
         {
-
-
-            //Ad Soyad Çekme
             LblTc.Text = tc;
-            SqlCommand komut = new SqlCommand("Select HastaAd,HastaSoyad From Tbl_Hastalar where HastaTc=@p1", bgln.baglanti());
-            komut.Parameters.AddWithValue("@p1", tc);
-            SqlDataReader dr = komut.ExecuteReader();
-            while (dr.Read())
-            {
-                LblAdSoyad.Text = dr[0] + " " + dr[1];
-
-            }
-            bgln.baglanti().Close();
-
-            //Geçmiş Randevu Listesi
-            DataTable dt = new DataTable();
-            SqlDataAdapter da = new SqlDataAdapter("Select * From Tbl_Randevular where HastaTc='" + tc + "'", bgln.baglanti());
-            da.Fill(dt);
-            dataGridView1.DataSource = dt;
-
-            //Branşları Çekme comboboxa
-            SqlCommand komut2 = new SqlCommand("Select BransAd From Tbl_Branslar", bgln.baglanti());
-            SqlDataReader dr2 = komut2.ExecuteReader();
-            while (dr2.Read())
-            {
-                CmbBrans.Items.Add(dr2[0]);
-            }
-            bgln.baglanti().Close();
-
-            //Doktorları Çekme comboboxa
-            SqlCommand komut3 = new SqlCommand("Select DoktorAd from Tbl_Doktorlar", bgln.baglanti());
-            SqlDataReader dr3 = komut3.ExecuteReader();
-            while (dr3.Read())
-            {
-                CmbDoktor.Items.Add(dr3[0]);
-            }
-
-
+            var patient = Database.Query("SELECT HastaAd,HastaSoyad FROM Tbl_Hastalar WHERE HastaTc=@tc", Database.P("@tc", tc));
+            if (patient.Rows.Count == 0) { Close(); return; }
+            LblAdSoyad.Text = patient.Rows[0]["HastaAd"] + " " + patient.Rows[0]["HastaSoyad"];
+            History();
+            CmbBrans.DropDownStyle = ComboBoxStyle.DropDownList; CmbDoktor.DropDownStyle = ComboBoxStyle.DropDownList;
+            CmbBrans.Items.Clear();
+            foreach (DataRow row in Database.Query("SELECT BransAd FROM Tbl_Branslar ORDER BY BransAd").Rows) CmbBrans.Items.Add(row[0]);
         }
-
         private void CmbBrans_SelectedIndexChanged(object sender, EventArgs e)
         {
-            CmbDoktor.Items.Clear();
-            SqlCommand komut4 = new SqlCommand("select DoktorAd,DoktorSoyad from Tbl_Doktorlar where DoktorBrans=@p1", bgln.baglanti());
-            komut4.Parameters.AddWithValue("@p1", CmbBrans.Text);
-            SqlDataReader dr4 = komut4.ExecuteReader();
-            while (dr4.Read())
-            {
-                CmbDoktor.Items.Add(dr4[0] + " " + dr4[1]);
-
-            }
-            bgln.baglanti().Close();
-
-
+            CmbDoktor.Items.Clear(); CmbDoktor.SelectedIndex = -1;
+            foreach (DataRow row in Database.Query("SELECT DoktorAd+' '+DoktorSoyad FROM Tbl_Doktorlar WHERE DoktorBrans=@brans ORDER BY DoktorAd,DoktorSoyad", Database.P("@brans", CmbBrans.Text)).Rows) CmbDoktor.Items.Add(row[0]);
+            Available();
         }
-
-        private void CmbDoktor_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            DataTable dt = new DataTable();
-            SqlDataAdapter da = new SqlDataAdapter("Select * From Tbl_Randevular where RandevuBrans='" + CmbBrans.Text + "'" + "and Randevudoktor='"+CmbDoktor.Text+"'and RandevuDurum=0 ", bgln.baglanti());
-            da.Fill(dt);
-            dataGridView2.DataSource = dt;
-            
-
-        }
-
+        private void CmbDoktor_SelectedIndexChanged(object sender, EventArgs e) { Available(); }
         private void LnkBilgiDuzenle_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            FrmBilgiDuzenle frm = new FrmBilgiDuzenle();
-            frm.tcno=LblTc.Text;
-            frm.Show();
-
-        }
-
+        { using (var form = new FrmBilgiDuzenle { tcno = tc }) form.ShowDialog(this); FrmHastaDetay_Load(sender, e); }
         private void dataGridView2_CellClick(object sender, DataGridViewCellEventArgs e)
-        {
-
-            int secilen = dataGridView2.SelectedCells[0].RowIndex;
-            TxtId.Text = dataGridView2.Rows[secilen].Cells[0].Value.ToString();
-
-
-
-        }
-
+        { if (FormTools.Row(dataGridView2, e)) TxtId.Text = Convert.ToString(dataGridView2.Rows[e.RowIndex].Cells["Randevuid"].Value); }
         private void BtnRandevuAl_Click(object sender, EventArgs e)
         {
-            SqlCommand komut = new SqlCommand("Update Tbl_Randevular set RandevuDurum=1,HastaTc=@p1,HastaSikayet=@p2 where Randevuid=@p3", bgln.baglanti());
-            komut.Parameters.AddWithValue("@p1", LblTc.Text);
-            komut.Parameters.AddWithValue("@p2", RchSikayet.Text);
-            komut.Parameters.AddWithValue("@p3", TxtId.Text);
-            komut.ExecuteNonQuery();
-            MessageBox.Show("Randevunuz Alınmıştır", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            bgln.baglanti().Close();
-            RchSikayet.Clear();
-            CmbBrans.Items.Clear();
-            CmbDoktor.Items.Clear();
+            int id;
+            if (!int.TryParse(TxtId.Text, out id)) throw new ArgumentException("Listeden bir randevu seçin.");
+            if (!AppointmentService.Book(id, tc, RchSikayet.Text)) { MessageBox.Show("Bu randevu artık uygun değil. Güncel listeden başka bir saat seçin."); Available(); return; }
+            MessageBox.Show("Randevunuz alındı.", "Bilgi");
+            RchSikayet.Clear(); History(); Available();
         }
     }
 }

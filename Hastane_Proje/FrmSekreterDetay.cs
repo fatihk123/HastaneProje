@@ -1,178 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SqlClient;
-
-
 namespace Hastane_Proje
 {
     public partial class FrmSekreterDetay : Form
     {
-        public FrmSekreterDetay()
-        {
-            InitializeComponent();
-        }
-        sqlbaglantisi bgl = new sqlbaglantisi();
         public string stc;
-        public string id,tarih,saat,brans,doktor,tc;
+        public string id, tarih, saat, brans, doktor, tc;
         public bool durum;
-
+        public FrmSekreterDetay() { InitializeComponent(); CmbBrans.DropDownStyle = ComboBoxStyle.DropDownList; CmbDoktor.DropDownStyle = ComboBoxStyle.DropDownList; }
         private void FrmSekreterDetay_Load(object sender, EventArgs e)
         {
             LblTc.Text = stc;
-            SqlCommand komut = new SqlCommand("Select SekreterAdSoyad from Tbl_Sekreter where SekreterTc=@p1", bgl.baglanti());
-            komut.Parameters.AddWithValue("@p1", LblTc.Text);
-            SqlDataReader dr = komut.ExecuteReader();
-            while (dr.Read())
-            {
-                LblAdSoyad.Text = dr[0].ToString();
-            }
-            bgl.baglanti().Close();
-
-            //Branşları DataGrid'e Çekme
-
-            DataTable dt = new DataTable();
-            SqlDataAdapter da = new SqlDataAdapter("Select * From Tbl_Branslar", bgl.baglanti());
-            da.Fill(dt);
-            dataGridView1.DataSource = dt;
-
-            //Doktorları DataGrid'e Çekme
-            DataTable dt2 = new DataTable();
-            SqlDataAdapter da2 = new SqlDataAdapter("Select (DoktorAd +' '+ DoktorSoyad)as 'Doktorlar' ,DoktorBrans From Tbl_Doktorlar", bgl.baglanti());
-            da2.Fill(dt2);
-            dataGridView2.DataSource = dt2;
-
-
-            //Branşları ComboBox'a Çekme
-            SqlCommand brns = new SqlCommand("Select BransAd from Tbl_Branslar ", bgl.baglanti());
-            SqlDataReader dr1 = brns.ExecuteReader();
-            while (dr1.Read())
-            {
-                CmbBrans.Items.Add(dr1[0].ToString());
-
-            }
-            bgl.baglanti().Close();
-
-
+            var secretary = Database.Query("SELECT SekreterAdSoyad FROM Tbl_Sekreter WHERE SekreterTc=@tc", Database.P("@tc", stc));
+            if (secretary.Rows.Count == 0) { Close(); return; }
+            LblAdSoyad.Text = Convert.ToString(secretary.Rows[0][0]);
+            dataGridView1.DataSource = Database.Query("SELECT Bransid,BransAd FROM Tbl_Branslar ORDER BY BransAd"); FormTools.Grid(dataGridView1);
+            dataGridView2.DataSource = Database.Query("SELECT DoktorAd+' '+DoktorSoyad AS Doktorlar,DoktorBrans FROM Tbl_Doktorlar ORDER BY DoktorAd,DoktorSoyad"); FormTools.Grid(dataGridView2);
+            CmbBrans.Items.Clear();
+            foreach (DataRow row in Database.Query("SELECT BransAd FROM Tbl_Branslar ORDER BY BransAd").Rows) CmbBrans.Items.Add(row[0]);
+            if (!string.IsNullOrEmpty(id)) button1_Click(sender, e);
         }
-
         private void CmbBrans_SelectedIndexChanged(object sender, EventArgs e)
         {
-
-            //Doktorları ComboBox'a Çekme
             CmbDoktor.Items.Clear();
-            SqlCommand doktor = new SqlCommand("Select (DoktorAd+' '+DoktorSoyad) From Tbl_Doktorlar where DoktorBrans=@p1 " , bgl.baglanti());
-            doktor.Parameters.AddWithValue("@p1", CmbBrans.Text);
-            SqlDataReader dr2 = doktor.ExecuteReader();
-            while (dr2.Read())
-            {
-                CmbDoktor.Items.Add(dr2[0].ToString());
-
-
-            }
-            bgl.baglanti().Close();
-
+            foreach (DataRow row in Database.Query("SELECT DoktorAd+' '+DoktorSoyad FROM Tbl_Doktorlar WHERE DoktorBrans=@brans ORDER BY DoktorAd,DoktorSoyad", Database.P("@brans", CmbBrans.Text)).Rows) CmbDoktor.Items.Add(row[0]);
         }
-
         private void BtnKaydet_Click(object sender, EventArgs e)
-        {
-
-            SqlCommand komutkaydet = new SqlCommand("Insert Into Tbl_Randevular (RandevuTarih,RandevuSaat,RandevuBrans,RandevuDoktor) Values (@p1,@p2,@p3,@p4)", bgl.baglanti());
-            komutkaydet.Parameters.AddWithValue("@p1", MskTarih.Text);
-            komutkaydet.Parameters.AddWithValue("@p2", MskSaat.Text);
-            komutkaydet.Parameters.AddWithValue("@p3", CmbBrans.Text);
-            komutkaydet.Parameters.AddWithValue("@p4", CmbDoktor.Text);
-            komutkaydet.ExecuteNonQuery();
-            bgl.baglanti().Close();
-            MessageBox.Show("Randevu Oluşturuldu", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-        }
-
-        private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-
-        }
-
+        { AppointmentService.Create(FormTools.Date(MskTarih.Text), FormTools.Time(MskSaat.Text), CmbBrans.Text, CmbDoktor.Text); MessageBox.Show("Randevu saati oluşturuldu."); }
+        private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
         private void button1_Click(object sender, EventArgs e)
-        {
-
-            Txtid.Text = id;
-            MskTarih.Text = tarih;
-            MskSaat.Text = saat;
-            CmbBrans.Text = brans;
-            CmbDoktor.Text = doktor;
-            MskTc.Text = tc;
-            ChkDurum.Checked = durum;
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            FrmDuyurular frd = new FrmDuyurular();
-            frd.Show();
-        }
-
+        { Txtid.Text = id; MskTarih.Text = tarih; MskSaat.Text = saat; CmbBrans.Text = brans; CmbDoktor.Text = doktor; MskTc.Text = tc; ChkDurum.Checked = durum; }
+        private void button2_Click(object sender, EventArgs e) { using (var form = new FrmDuyurular()) form.ShowDialog(this); }
         private void BtnGuncelle_Click(object sender, EventArgs e)
         {
-
-            SqlCommand komutguncelle = new SqlCommand("Update Tbl_Randevular set RandevuTarih=@p1,RandevuSaat=@p2,RandevuBrans=@p3,RandevuDoktor=@p4,RandevuDurum=@p5 where Randevuid=@p6", bgl.baglanti());
-            komutguncelle.Parameters.AddWithValue("@p1", MskTarih.Text);
-            komutguncelle.Parameters.AddWithValue("@p2", MskSaat.Text);
-            komutguncelle.Parameters.AddWithValue("@p3", CmbBrans.Text);
-            komutguncelle.Parameters.AddWithValue("@p4", CmbDoktor.Text);
-            komutguncelle.Parameters.AddWithValue("@p5", ChkDurum.Checked);
-            komutguncelle.Parameters.AddWithValue("@p6", Txtid.Text);
-            komutguncelle.ExecuteNonQuery();
-            bgl.baglanti().Close();
-            MessageBox.Show("Randevu Güncellendi", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            MskTarih.Clear();
-            MskSaat.Clear();
-            CmbBrans.Text = "";
-            CmbDoktor.Text = "";
-            MskTc.Clear();
-            ChkDurum.Checked = false;
-            Txtid.Clear();
-            CmbBrans.Items.Clear();
-            CmbDoktor.Items.Clear();
-
-
+            int selectedId; if (!int.TryParse(Txtid.Text, out selectedId)) throw new ArgumentException("Randevu listesinden bir kayıt seçin.");
+            var identity = ChkDurum.Checked ? FormTools.Identity(MskTc.Text) : null;
+            int updated = Database.Execute("IF NOT EXISTS(SELECT 1 FROM Tbl_Doktorlar WHERE DoktorAd+' '+DoktorSoyad=@doctor AND DoktorBrans=@branch) THROW 50001,'Doktor ve branş eşleşmiyor.',1; UPDATE Tbl_Randevular SET RandevuTarih=@date,RandevuSaat=@time,RandevuBrans=@branch,RandevuDoktor=@doctor,RandevuDurum=@status,HastaTc=@tc,HastaSikayet=CASE WHEN @status=0 OR HastaTc<>@tc THEN NULL ELSE HastaSikayet END WHERE Randevuid=@id", Database.P("@date", FormTools.Date(MskTarih.Text)), Database.P("@time", FormTools.Time(MskSaat.Text)), Database.P("@branch", FormTools.Required(CmbBrans.Text, "Branş")), Database.P("@doctor", FormTools.Required(CmbDoktor.Text, "Doktor", 201)), Database.P("@status", ChkDurum.Checked), Database.P("@tc", identity), Database.P("@id", selectedId));
+            if (updated != 1) { MessageBox.Show("Randevu kaydı bulunamadı."); return; }
+            MessageBox.Show("Randevu güncellendi."); Close();
         }
-
         private void BtnDuyuruOlustur_Click(object sender, EventArgs e)
-        {
-            SqlCommand komut = new SqlCommand("Insert Into Tbl_Duyurular (Duyuru) Values (@p1)", bgl.baglanti());
-            komut.Parameters.AddWithValue("@p1", RchDuyuru.Text);
-            komut.ExecuteNonQuery();
-            bgl.baglanti().Close();
-            MessageBox.Show("Duyuru Oluşturuldu", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            RchDuyuru.Clear();
-
-        }
-
-        private void BtnDoktorPaneli_Click(object sender, EventArgs e)
-        {
-            FrmDoktorPaneli drp = new FrmDoktorPaneli();
-            drp.Show();
-
-        }
-
-        private void BtnBransPaneli_Click(object sender, EventArgs e)
-        {
-            FrmBrans frmBrans = new FrmBrans();
-            frmBrans.Show();
-
-        }
-
-        private void BtnRandevuListe_Click(object sender, EventArgs e)
-        {
-            FrmRandevuListesi frmRandevuListesi = new FrmRandevuListesi();
-            frmRandevuListesi.Show();
-
-        }
+        { Database.Execute("INSERT INTO Tbl_Duyurular(Duyuru) VALUES(@text)", Database.P("@text", FormTools.Required(RchDuyuru.Text, "Duyuru", 2000))); RchDuyuru.Clear(); MessageBox.Show("Duyuru oluşturuldu."); }
+        private void BtnDoktorPaneli_Click(object sender, EventArgs e) { using (var form = new FrmDoktorPaneli()) form.ShowDialog(this); FrmSekreterDetay_Load(sender, e); }
+        private void BtnBransPaneli_Click(object sender, EventArgs e) { using (var form = new FrmBrans()) form.ShowDialog(this); FrmSekreterDetay_Load(sender, e); }
+        private void BtnRandevuListe_Click(object sender, EventArgs e) { using (var form = new FrmRandevuListesi { SekreterTc = stc }) form.ShowDialog(this); }
     }
 }
