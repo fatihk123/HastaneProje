@@ -1,0 +1,13 @@
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.log
+*.mdf
+*.ldf
+*.bak
+.env
+App.local.config
+artifacts/
+TestResults/
